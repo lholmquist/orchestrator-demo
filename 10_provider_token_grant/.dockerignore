@@ -1,0 +1,8 @@
+*
+!target/*-runner
+!target/*-runner.jar
+!target/lib/*
+!target/quarkus-app/*
+!target/classes/*.sw.json
+!target/classes/*.sw.yaml
+!target/classes/*.sw.yml
