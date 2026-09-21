@@ -13,6 +13,6 @@
       "description": "Provider selected for this prototype"
     }
   },
-  "required": ["grantId", "provider"],
+  "required": [],
   "additionalProperties": false
 }

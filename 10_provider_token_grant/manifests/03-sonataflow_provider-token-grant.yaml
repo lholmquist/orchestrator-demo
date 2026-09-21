@@ -40,8 +40,8 @@ spec:
           useResults: true
         functionRef:
           arguments:
-            grantId: .grantId
-            provider: .provider
+            grantId: '${ .grantId // $WORKFLOW.headers."X-Provider-Token-Grant-Github" }'
+            provider: '${ .provider // "github" }'
           invoke: sync
           refName: getProviderProfile
         name: callProvider

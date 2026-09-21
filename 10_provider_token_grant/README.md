@@ -1,9 +1,11 @@
 # Provider token grant consumer
 
-This experimental workflow receives an opaque `{ grantId, provider }` reference,
-retrieves a short-lived provider token through the secure-token-storage broker,
-and immediately uses it to call GitHub's `/user` endpoint. The token is never
-returned in workflow state, logged, or included in an error message.
+This experimental workflow receives an opaque provider grant reference, either
+as `{ grantId, provider }` workflow input or as the
+`X-Provider-Token-Grant-Github` request header. It retrieves a short-lived
+provider token through the secure-token-storage broker and immediately uses it
+to call GitHub's `/user` endpoint. The token is never returned in workflow
+state, logged, or included in an error message.
 
 The workflow is intentionally stateless: it does not include the Data Index or
 embedded Jobs Service, so local dev mode does not start PostgreSQL persistence
@@ -28,6 +30,20 @@ curl -X POST http://localhost:8080/provider-token-grant \
   -H 'Content-Type: application/json' \
   -d '{"grantId":"<grant-id>","provider":"github"}'
 ```
+
+The same workflow can resolve the grant from the provider-specific header:
+
+```bash
+curl -X POST http://localhost:8080/provider-token-grant \
+  -H 'Content-Type: application/json' \
+  -H 'X-Provider-Token-Grant-Github: <grant-id>' \
+  -d '{}'
+```
+
+When the workflow is started through the Orchestrator backend, provide the
+opaque reference in the request's `providerTokenGrants` array. The Orchestrator
+backend forwards it as `X-Provider-Token-Grant-Github`; normal workflow input
+continues to be supported as well.
 
 ## Build and deploy
 

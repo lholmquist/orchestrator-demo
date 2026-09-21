@@ -78,6 +78,14 @@
             <groupId>org.kie</groupId>
             <artifactId>kie-addons-quarkus-source-files</artifactId>
         </dependency>
+         <dependency>
+            <groupId>org.kie</groupId>
+            <artifactId>kogito-addons-quarkus-data-index-inmemory</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.kie</groupId>
+            <artifactId>kogito-addons-quarkus-jobs-service-embedded</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.apache.kie.sonataflow</groupId>
             <artifactId>sonataflow-quarkus</artifactId>
@@ -85,7 +93,7 @@
         <dependency>
             <groupId>org.apache.kie.sonataflow</groupId>
             <artifactId>sonataflow-quarkus-devui</artifactId>
-            <version>9.104.0.redhat-00005</version>
+            <version>${kie.version}</version>
         </dependency>
     </dependencies>
     <build>
@@ -101,7 +109,6 @@
                             <goal>build</goal>
                             <goal>generate-code</goal>
                             <goal>generate-code-tests</goal>
-                            <goal>native-image-agent</goal>
                         </goals>
                     </execution>
                 </executions>

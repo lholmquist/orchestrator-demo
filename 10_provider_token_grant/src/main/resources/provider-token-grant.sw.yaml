@@ -23,8 +23,8 @@ states:
         functionRef:
           refName: getProviderProfile
           arguments:
-            grantId: .grantId
-            provider: .provider
+            grantId: '${ .grantId // $WORKFLOW.headers."X-Provider-Token-Grant-Github" }'
+            provider: '${ .provider // "github" }'
         actionDataFilter:
           toStateData: .profile
     end: true
