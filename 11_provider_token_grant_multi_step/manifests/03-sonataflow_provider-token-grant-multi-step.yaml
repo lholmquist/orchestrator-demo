@@ -2,9 +2,10 @@ apiVersion: sonataflow.org/v1alpha08
 kind: SonataFlow
 metadata:
   annotations:
-    sonataflow.org/description: Experimental call-time provider-token retrieval. The
-      workflow passes an opaque grant reference to a custom operation; the operation
-      retrieves a short-lived token and uses it immediately for a provider API call.
+    sonataflow.org/description: Experimental call-time provider-token retrieval. Each
+      custom operation asks the RHDH secure-token-storage broker for a current GitHub
+      token immediately before making one read-only GitHub API request. The token
+      never enters workflow state.
     sonataflow.org/expressionLang: jq
     sonataflow.org/profile: gitops
     sonataflow.org/version: 0.1.0
@@ -30,6 +31,15 @@ spec:
     - name: getProviderProfile
       operation: service:java:io.rhdhorchestrator.workflow.providertoken.ProviderTokenConsumer::getGithubProfile
       type: custom
+    - name: listPrivateRepositories
+      operation: service:java:io.rhdhorchestrator.workflow.providertoken.ProviderTokenConsumer::listGithubPrivateRepositories
+      type: custom
+    - name: listOrganizations
+      operation: service:java:io.rhdhorchestrator.workflow.providertoken.ProviderTokenConsumer::listGithubOrganizations
+      type: custom
+    - name: listStarredRepositories
+      operation: service:java:io.rhdhorchestrator.workflow.providertoken.ProviderTokenConsumer::listGithubStarredRepositories
+      type: custom
     start:
       stateName: GetProviderProfile
     states:
@@ -46,9 +56,66 @@ spec:
           invoke: sync
           refName: getProviderProfile
         name: callProvider
+      name: GetProviderProfile
+      transition:
+        nextState: ListPrivateRepositories
+      type: operation
+    - actionMode: sequential
+      actions:
+      - actionDataFilter:
+          toStateData: .privateRepositories
+          useResults: true
+        functionRef:
+          arguments:
+            grantId: ${ .grantId // $WORKFLOW.headers."X-Provider-Token-Grant-Github"
+              }
+            page: ${ .page // 1 }
+            perPage: ${ .perPage // 100 }
+            provider: ${ .provider // "github" }
+          invoke: sync
+          refName: listPrivateRepositories
+        name: callProvider
+      name: ListPrivateRepositories
+      transition:
+        nextState: ListOrganizations
+      type: operation
+    - actionMode: sequential
+      actions:
+      - actionDataFilter:
+          toStateData: .organizations
+          useResults: true
+        functionRef:
+          arguments:
+            grantId: ${ .grantId // $WORKFLOW.headers."X-Provider-Token-Grant-Github"
+              }
+            page: ${ .page // 1 }
+            perPage: ${ .perPage // 100 }
+            provider: ${ .provider // "github" }
+          invoke: sync
+          refName: listOrganizations
+        name: callProvider
+      name: ListOrganizations
+      transition:
+        nextState: ListStarredRepositories
+      type: operation
+    - actionMode: sequential
+      actions:
+      - actionDataFilter:
+          toStateData: .starredRepositories
+          useResults: true
+        functionRef:
+          arguments:
+            grantId: ${ .grantId // $WORKFLOW.headers."X-Provider-Token-Grant-Github"
+              }
+            page: ${ .page // 1 }
+            perPage: ${ .perPage // 100 }
+            provider: ${ .provider // "github" }
+          invoke: sync
+          refName: listStarredRepositories
+        name: callProvider
       end:
         terminate: true
-      name: GetProviderProfile
+      name: ListStarredRepositories
       type: operation
   podTemplate:
     container:

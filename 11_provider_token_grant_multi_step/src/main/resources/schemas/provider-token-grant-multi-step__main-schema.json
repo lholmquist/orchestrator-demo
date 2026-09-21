@@ -11,9 +11,21 @@
       "type": "string",
       "const": "github",
       "description": "Provider selected for this prototype"
+    },
+    "page": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 1,
+      "description": "Page number for list operations"
+    },
+    "perPage": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100,
+      "default": 100,
+      "description": "Number of results per list operation page"
     }
   },
   "required": [],
   "additionalProperties": false
 }
-

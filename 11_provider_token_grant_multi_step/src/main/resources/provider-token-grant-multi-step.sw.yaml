@@ -2,9 +2,10 @@ specVersion: "0.8"
 id: provider-token-grant-multi-step
 name: Provider Token Grant Multi-Step Consumer
 description: >-
-  Experimental call-time provider-token retrieval. The workflow passes an
-  opaque grant reference to a custom operation; the operation retrieves a
-  short-lived token and uses it immediately for a provider API call.
+  Experimental call-time provider-token retrieval. Each custom operation asks
+  the RHDH secure-token-storage broker for a current GitHub token immediately
+  before making one read-only GitHub API request. The token never enters
+  workflow state.
 annotations:
   - "workflow-type/experimental"
 version: 0.1.0
@@ -15,6 +16,18 @@ functions:
     type: custom
     operation: >-
       service:java:io.rhdhorchestrator.workflow.providertoken.ProviderTokenConsumer::getGithubProfile
+  - name: listPrivateRepositories
+    type: custom
+    operation: >-
+      service:java:io.rhdhorchestrator.workflow.providertoken.ProviderTokenConsumer::listGithubPrivateRepositories
+  - name: listOrganizations
+    type: custom
+    operation: >-
+      service:java:io.rhdhorchestrator.workflow.providertoken.ProviderTokenConsumer::listGithubOrganizations
+  - name: listStarredRepositories
+    type: custom
+    operation: >-
+      service:java:io.rhdhorchestrator.workflow.providertoken.ProviderTokenConsumer::listGithubStarredRepositories
 states:
   - name: GetProviderProfile
     type: operation
@@ -27,5 +40,49 @@ states:
             provider: '${ .provider // "github" }'
         actionDataFilter:
           toStateData: .profile
-    end: true
+    transition: ListPrivateRepositories
 
+  - name: ListPrivateRepositories
+    type: operation
+    actions:
+      - name: callProvider
+        functionRef:
+          refName: listPrivateRepositories
+          arguments:
+            grantId: '${ .grantId // $WORKFLOW.headers."X-Provider-Token-Grant-Github" }'
+            provider: '${ .provider // "github" }'
+            page: '${ .page // 1 }'
+            perPage: '${ .perPage // 100 }'
+        actionDataFilter:
+          toStateData: .privateRepositories
+    transition: ListOrganizations
+
+  - name: ListOrganizations
+    type: operation
+    actions:
+      - name: callProvider
+        functionRef:
+          refName: listOrganizations
+          arguments:
+            grantId: '${ .grantId // $WORKFLOW.headers."X-Provider-Token-Grant-Github" }'
+            provider: '${ .provider // "github" }'
+            page: '${ .page // 1 }'
+            perPage: '${ .perPage // 100 }'
+        actionDataFilter:
+          toStateData: .organizations
+    transition: ListStarredRepositories
+
+  - name: ListStarredRepositories
+    type: operation
+    actions:
+      - name: callProvider
+        functionRef:
+          refName: listStarredRepositories
+          arguments:
+            grantId: '${ .grantId // $WORKFLOW.headers."X-Provider-Token-Grant-Github" }'
+            provider: '${ .provider // "github" }'
+            page: '${ .page // 1 }'
+            perPage: '${ .perPage // 100 }'
+        actionDataFilter:
+          toStateData: .starredRepositories
+    end: true
