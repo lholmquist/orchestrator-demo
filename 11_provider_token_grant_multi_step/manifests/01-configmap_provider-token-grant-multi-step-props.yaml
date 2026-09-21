@@ -1,0 +1,27 @@
+apiVersion: v1
+data:
+  application.properties: |+
+    # The broker endpoint is the Backstage secure-token-storage service route.
+    secure-token-storage.url=${SECURE_TOKEN_STORAGE_URL:http://localhost:7007/api/secure-token-storage/token}
+    secure-token-storage.service-token=${SECURE_TOKEN_STORAGE_SERVICE_TOKEN:}
+    github.profile-url=${GITHUB_PROFILE_URL:https://api.github.com/user}
+    # This standalone workflow does not provide a local Data Index service.
+    quarkus.kogito.devservices.enabled=false
+    # Keep HTTP client logging disabled: provider access tokens must never enter logs.
+    quarkus.log.category."org.jboss.resteasy.reactive.client.logging".level=OFF
+    # Disable PGAdmin UI
+    quarkus.pgadmin-ui.enabled=false
+
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  labels:
+    app: provider-token-grant-multi-step
+    app.kubernetes.io/component: serverless-workflow
+    app.kubernetes.io/instance: provider-token-grant-multi-step
+    app.kubernetes.io/managed-by: sonataflow-operator
+    app.kubernetes.io/name: provider-token-grant-multi-step
+    app.kubernetes.io/version: main
+    sonataflow.org/workflow-app: provider-token-grant-multi-step
+    sonataflow.org/workflow-namespace: ""
+  name: provider-token-grant-multi-step-props
