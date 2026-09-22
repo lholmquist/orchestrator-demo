@@ -1,0 +1,143 @@
+specVersion: "0.8"
+id: provider-token-grant-multi-step-another-try
+name: Provider Token Grant Multi-Step Another Try
+description: >-
+  Experimental declarative provider-token retrieval. Each operation first asks
+  the RHDH secure-token-storage broker for a current GitHub token, then passes
+  that token as a GitHub Authorization header for one read-only API request.
+annotations:
+  - "workflow-type/experimental"
+version: 0.1.0
+start: GetProviderProfile
+dataInputSchema: schemas/provider-token-grant-multi-step-another-try__main-schema.json
+functions:
+  - name: getProviderToken
+    type: custom
+    operation: >-
+      rest:post:/api/secure-token-storage/token
+  - name: getGithubProfile
+    type: custom
+    operation: >-
+      rest:get:/user
+  - name: getGithubPrivateRepositories
+    type: custom
+    operation: >-
+      rest:get:/user/repos?visibility=private&affiliation=owner%2Ccollaborator%2Corganization_member&page={page}&per_page={perPage}
+  - name: getGithubOrganizations
+    type: custom
+    operation: >-
+      rest:get:/user/orgs?page={page}&per_page={perPage}
+  - name: getGithubStarredRepositories
+    type: custom
+    operation: >-
+      rest:get:/user/starred?page={page}&per_page={perPage}
+states:
+  - name: GetProviderProfile
+    type: operation
+    actions:
+      - name: getProviderToken
+        functionRef:
+          refName: getProviderToken
+          arguments:
+            grantId: '${ .grantId // $WORKFLOW.headers."X-Provider-Token-Grant-Github" }'
+            provider: '${ .provider // "github" }'
+            HEADER_Content-Type: application/json
+            HEADER_Authorization: '${ "Bearer " + $SECRET.secure_token_storage_service_token }'
+        actionDataFilter:
+          toStateData: .providerToken
+      - name: callGithub
+        functionRef:
+          refName: getGithubProfile
+          arguments:
+            HEADER_Accept: application/vnd.github+json
+            HEADER_X-GitHub-Api-Version: '${ $SECRET.github_api_version }'
+            HEADER_Authorization: '${ "Bearer " + .providerToken.accessToken }'
+        actionDataFilter:
+          toStateData: .profile
+    stateDataFilter:
+      output: del(.providerToken)
+    transition: ListPrivateRepositories
+
+  - name: ListPrivateRepositories
+    type: operation
+    actions:
+      - name: getProviderToken
+        functionRef:
+          refName: getProviderToken
+          arguments:
+            grantId: '${ .grantId // $WORKFLOW.headers."X-Provider-Token-Grant-Github" }'
+            provider: '${ .provider // "github" }'
+            HEADER_Content-Type: application/json
+            HEADER_Authorization: '${ "Bearer " + $SECRET.secure_token_storage_service_token }'
+        actionDataFilter:
+          toStateData: .providerToken
+      - name: callGithub
+        functionRef:
+          refName: getGithubPrivateRepositories
+          arguments:
+            page: '${ .page // 1 }'
+            perPage: '${ .perPage // 100 }'
+            HEADER_Accept: application/vnd.github+json
+            HEADER_X-GitHub-Api-Version: '${ $SECRET.github_api_version }'
+            HEADER_Authorization: '${ "Bearer " + .providerToken.accessToken }'
+        actionDataFilter:
+          toStateData: .privateRepositories
+    stateDataFilter:
+      output: del(.providerToken)
+    transition: ListOrganizations
+
+  - name: ListOrganizations
+    type: operation
+    actions:
+      - name: getProviderToken
+        functionRef:
+          refName: getProviderToken
+          arguments:
+            grantId: '${ .grantId // $WORKFLOW.headers."X-Provider-Token-Grant-Github" }'
+            provider: '${ .provider // "github" }'
+            HEADER_Content-Type: application/json
+            HEADER_Authorization: '${ "Bearer " + $SECRET.secure_token_storage_service_token }'
+        actionDataFilter:
+          toStateData: .providerToken
+      - name: callGithub
+        functionRef:
+          refName: getGithubOrganizations
+          arguments:
+            page: '${ .page // 1 }'
+            perPage: '${ .perPage // 100 }'
+            HEADER_Accept: application/vnd.github+json
+            HEADER_X-GitHub-Api-Version: '${ $SECRET.github_api_version }'
+            HEADER_Authorization: '${ "Bearer " + .providerToken.accessToken }'
+        actionDataFilter:
+          toStateData: .organizations
+    stateDataFilter:
+      output: del(.providerToken)
+    transition: ListStarredRepositories
+
+  - name: ListStarredRepositories
+    type: operation
+    actions:
+      - name: getProviderToken
+        functionRef:
+          refName: getProviderToken
+          arguments:
+            grantId: '${ .grantId // $WORKFLOW.headers."X-Provider-Token-Grant-Github" }'
+            provider: '${ .provider // "github" }'
+            HEADER_Content-Type: application/json
+            HEADER_Authorization: '${ "Bearer " + $SECRET.secure_token_storage_service_token }'
+        actionDataFilter:
+          toStateData: .providerToken
+      - name: callGithub
+        functionRef:
+          refName: getGithubStarredRepositories
+          arguments:
+            page: '${ .page // 1 }'
+            perPage: '${ .perPage // 100 }'
+            HEADER_Accept: application/vnd.github+json
+            HEADER_X-GitHub-Api-Version: '${ $SECRET.github_api_version }'
+            HEADER_Authorization: '${ "Bearer " + .providerToken.accessToken }'
+        actionDataFilter:
+          toStateData: .starredRepositories
+    stateDataFilter:
+      output: del(.providerToken)
+    end: true

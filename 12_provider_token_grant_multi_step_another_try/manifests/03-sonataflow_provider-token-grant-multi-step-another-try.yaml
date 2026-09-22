@@ -1,0 +1,198 @@
+apiVersion: sonataflow.org/v1alpha08
+kind: SonataFlow
+metadata:
+  annotations:
+    sonataflow.org/description: Experimental declarative provider-token retrieval.
+      Each operation first asks the RHDH secure-token-storage broker for a current
+      GitHub token, then passes that token as a GitHub Authorization header for one
+      read-only API request.
+    sonataflow.org/expressionLang: jq
+    sonataflow.org/profile: gitops
+    sonataflow.org/version: 0.1.0
+  creationTimestamp: null
+  labels:
+    app: provider-token-grant-multi-step-another-try
+    app.kubernetes.io/component: serverless-workflow
+    app.kubernetes.io/instance: provider-token-grant-multi-step-another-try
+    app.kubernetes.io/managed-by: sonataflow-operator
+    app.kubernetes.io/name: provider-token-grant-multi-step-another-try
+    app.kubernetes.io/version: main
+    sonataflow.org/workflow-app: provider-token-grant-multi-step-another-try
+    sonataflow.org/workflow-namespace: ""
+  name: provider-token-grant-multi-step-another-try
+spec:
+  flow:
+    annotations:
+    - workflow-type/experimental
+    dataInputSchema:
+      failOnValidationErrors: true
+      schema: schemas/provider-token-grant-multi-step-another-try__main-schema.json
+    functions:
+    - name: getProviderToken
+      operation: rest:post:/api/secure-token-storage/token
+      type: custom
+    - name: getGithubProfile
+      operation: rest:get:/user
+      type: custom
+    - name: getGithubPrivateRepositories
+      operation: rest:get:/user/repos?visibility=private&affiliation=owner%2Ccollaborator%2Corganization_member&page={page}&per_page={perPage}
+      type: custom
+    - name: getGithubOrganizations
+      operation: rest:get:/user/orgs?page={page}&per_page={perPage}
+      type: custom
+    - name: getGithubStarredRepositories
+      operation: rest:get:/user/starred?page={page}&per_page={perPage}
+      type: custom
+    start:
+      stateName: GetProviderProfile
+    states:
+    - actionMode: sequential
+      actions:
+      - actionDataFilter:
+          toStateData: .providerToken
+          useResults: true
+        functionRef:
+          arguments:
+            HEADER_Authorization: ${ "Bearer " + $SECRET.secure_token_storage_service_token
+              }
+            HEADER_Content-Type: application/json
+            grantId: ${ .grantId // $WORKFLOW.headers."X-Provider-Token-Grant-Github"
+              }
+            provider: ${ .provider // "github" }
+          invoke: sync
+          refName: getProviderToken
+        name: getProviderToken
+      - actionDataFilter:
+          toStateData: .profile
+          useResults: true
+        functionRef:
+          arguments:
+            HEADER_Accept: application/vnd.github+json
+            HEADER_Authorization: ${ "Bearer " + .providerToken.accessToken }
+            HEADER_X-GitHub-Api-Version: ${ $SECRET.github_api_version }
+          invoke: sync
+          refName: getGithubProfile
+        name: callGithub
+      name: GetProviderProfile
+      stateDataFilter:
+        output: del(.providerToken)
+      transition:
+        nextState: ListPrivateRepositories
+      type: operation
+    - actionMode: sequential
+      actions:
+      - actionDataFilter:
+          toStateData: .providerToken
+          useResults: true
+        functionRef:
+          arguments:
+            HEADER_Authorization: ${ "Bearer " + $SECRET.secure_token_storage_service_token
+              }
+            HEADER_Content-Type: application/json
+            grantId: ${ .grantId // $WORKFLOW.headers."X-Provider-Token-Grant-Github"
+              }
+            provider: ${ .provider // "github" }
+          invoke: sync
+          refName: getProviderToken
+        name: getProviderToken
+      - actionDataFilter:
+          toStateData: .privateRepositories
+          useResults: true
+        functionRef:
+          arguments:
+            HEADER_Accept: application/vnd.github+json
+            HEADER_Authorization: ${ "Bearer " + .providerToken.accessToken }
+            HEADER_X-GitHub-Api-Version: ${ $SECRET.github_api_version }
+            page: ${ .page // 1 }
+            perPage: ${ .perPage // 100 }
+          invoke: sync
+          refName: getGithubPrivateRepositories
+        name: callGithub
+      name: ListPrivateRepositories
+      stateDataFilter:
+        output: del(.providerToken)
+      transition:
+        nextState: ListOrganizations
+      type: operation
+    - actionMode: sequential
+      actions:
+      - actionDataFilter:
+          toStateData: .providerToken
+          useResults: true
+        functionRef:
+          arguments:
+            HEADER_Authorization: ${ "Bearer " + $SECRET.secure_token_storage_service_token
+              }
+            HEADER_Content-Type: application/json
+            grantId: ${ .grantId // $WORKFLOW.headers."X-Provider-Token-Grant-Github"
+              }
+            provider: ${ .provider // "github" }
+          invoke: sync
+          refName: getProviderToken
+        name: getProviderToken
+      - actionDataFilter:
+          toStateData: .organizations
+          useResults: true
+        functionRef:
+          arguments:
+            HEADER_Accept: application/vnd.github+json
+            HEADER_Authorization: ${ "Bearer " + .providerToken.accessToken }
+            HEADER_X-GitHub-Api-Version: ${ $SECRET.github_api_version }
+            page: ${ .page // 1 }
+            perPage: ${ .perPage // 100 }
+          invoke: sync
+          refName: getGithubOrganizations
+        name: callGithub
+      name: ListOrganizations
+      stateDataFilter:
+        output: del(.providerToken)
+      transition:
+        nextState: ListStarredRepositories
+      type: operation
+    - actionMode: sequential
+      actions:
+      - actionDataFilter:
+          toStateData: .providerToken
+          useResults: true
+        functionRef:
+          arguments:
+            HEADER_Authorization: ${ "Bearer " + $SECRET.secure_token_storage_service_token
+              }
+            HEADER_Content-Type: application/json
+            grantId: ${ .grantId // $WORKFLOW.headers."X-Provider-Token-Grant-Github"
+              }
+            provider: ${ .provider // "github" }
+          invoke: sync
+          refName: getProviderToken
+        name: getProviderToken
+      - actionDataFilter:
+          toStateData: .starredRepositories
+          useResults: true
+        functionRef:
+          arguments:
+            HEADER_Accept: application/vnd.github+json
+            HEADER_Authorization: ${ "Bearer " + .providerToken.accessToken }
+            HEADER_X-GitHub-Api-Version: ${ $SECRET.github_api_version }
+            page: ${ .page // 1 }
+            perPage: ${ .perPage // 100 }
+          invoke: sync
+          refName: getGithubStarredRepositories
+        name: callGithub
+      end:
+        terminate: true
+      name: ListStarredRepositories
+      stateDataFilter:
+        output: del(.providerToken)
+      type: operation
+  podTemplate:
+    container:
+      image: quay.io/orchestrator/demo-provider-token-grant-multi-step-another-try:latest
+      resources: {}
+  resources:
+    configMaps:
+    - configMap:
+        name: 01-provider-token-grant-multi-step-another-try-resources-schemas
+      workflowPath: schemas
+status:
+  address: {}
+  lastTimeRecoverAttempt: null
