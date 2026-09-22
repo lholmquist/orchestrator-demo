@@ -18,19 +18,19 @@ functions:
   - name: getGithubProfile
     type: custom
     operation: >-
-      rest:get:/user
+      rest:get:https://api.github.com/user
   - name: getGithubPrivateRepositories
     type: custom
     operation: >-
-      rest:get:/user/repos?visibility=private&affiliation=owner%2Ccollaborator%2Corganization_member&page={page}&per_page={perPage}
+      rest:get:https://api.github.com/user/repos?visibility=private&affiliation=owner%2Ccollaborator%2Corganization_member&page={page}&per_page={perPage}
   - name: getGithubOrganizations
     type: custom
     operation: >-
-      rest:get:/user/orgs?page={page}&per_page={perPage}
+      rest:get:https://api.github.com/user/orgs?page={page}&per_page={perPage}
   - name: getGithubStarredRepositories
     type: custom
     operation: >-
-      rest:get:/user/starred?page={page}&per_page={perPage}
+      rest:get:https://api.github.com/user/starred?page={page}&per_page={perPage}
 states:
   - name: GetProviderProfile
     type: operation
@@ -53,6 +53,7 @@ states:
             HEADER_X-GitHub-Api-Version: '${ $SECRET.github_api_version }'
             HEADER_Authorization: '${ "Bearer " + .providerToken.accessToken }'
         actionDataFilter:
+          results: '{"name": .name, "login": .login, "email": .email, "company": .company}'
           toStateData: .profile
     stateDataFilter:
       output: del(.providerToken)
@@ -76,11 +77,12 @@ states:
           refName: getGithubPrivateRepositories
           arguments:
             page: '${ .page // 1 }'
-            perPage: '${ .perPage // 100 }'
+            perPage: 5
             HEADER_Accept: application/vnd.github+json
             HEADER_X-GitHub-Api-Version: '${ $SECRET.github_api_version }'
             HEADER_Authorization: '${ "Bearer " + .providerToken.accessToken }'
         actionDataFilter:
+          results: 'map({"id": .id, "name": .name, "full_name": .full_name, "html_url": .html_url, "description": .description, "private": .private, "default_branch": .default_branch, "owner": {"login": .owner.login}})'
           toStateData: .privateRepositories
     stateDataFilter:
       output: del(.providerToken)
@@ -104,11 +106,12 @@ states:
           refName: getGithubOrganizations
           arguments:
             page: '${ .page // 1 }'
-            perPage: '${ .perPage // 100 }'
+            perPage: 5
             HEADER_Accept: application/vnd.github+json
             HEADER_X-GitHub-Api-Version: '${ $SECRET.github_api_version }'
             HEADER_Authorization: '${ "Bearer " + .providerToken.accessToken }'
         actionDataFilter:
+          results: 'map({"id": .id, "login": .login, "html_url": .html_url, "description": .description})'
           toStateData: .organizations
     stateDataFilter:
       output: del(.providerToken)
@@ -132,11 +135,12 @@ states:
           refName: getGithubStarredRepositories
           arguments:
             page: '${ .page // 1 }'
-            perPage: '${ .perPage // 100 }'
+            perPage: 5
             HEADER_Accept: application/vnd.github+json
             HEADER_X-GitHub-Api-Version: '${ $SECRET.github_api_version }'
             HEADER_Authorization: '${ "Bearer " + .providerToken.accessToken }'
         actionDataFilter:
+          results: 'map({"id": .id, "name": .name, "full_name": .full_name, "html_url": .html_url, "description": .description, "private": .private, "default_branch": .default_branch, "owner": {"login": .owner.login}})'
           toStateData: .starredRepositories
     stateDataFilter:
       output: del(.providerToken)

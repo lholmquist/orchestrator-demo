@@ -4,6 +4,10 @@ This experimental workflow receives an opaque provider grant reference, either
 as `grantId` workflow input or as the `X-Provider-Token-Grant-Github` request
 header. It then performs four read-only GitHub operations: the user profile,
 the user's private repositories, organizations, and starred repositories.
+The profile result is limited to `name`, `login`, `email`, and `company`.
+The final GitHub state deletes the entire temporary `providerToken` object
+before completion. This avoids the KIE runtime concurrency issue triggered by
+mutating `providerToken.accessToken` in place.
 
 Before every GitHub request, the declarative workflow calls the
 secure-token-storage broker to obtain a current provider token. It passes the
@@ -57,10 +61,16 @@ opaque reference in the request's `providerTokenGrants` array. The Orchestrator
 backend forwards it as `X-Provider-Token-Grant-Github`; provide any optional
 pagination fields in the normal workflow input.
 
-The repository-listing step uses GitHub's `visibility=private` filter and the
-`owner,collaborator,organization_member` affiliations. Each list operation
-returns one page; set `page` and `perPage` in the input to retrieve another
+The private-repository and organization steps use GitHub's `visibility=private`
+filter and the `owner,collaborator,organization_member` affiliations. All three
+list steps return at most five items per page; use `page` to retrieve another
 page.
+
+Private-repository results are reduced to `id`, `name`, `full_name`,
+`html_url`, `description`, `private`, `default_branch`, and `owner.login`.
+Organization results are reduced to `id`, `login`, `html_url`, and
+`description`. Starred-repository results use the same reduced repository
+shape as private repositories.
 
 ## Build and deploy
 

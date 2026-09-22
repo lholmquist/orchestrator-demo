@@ -32,16 +32,16 @@ spec:
       operation: rest:post:/api/secure-token-storage/token
       type: custom
     - name: getGithubProfile
-      operation: rest:get:/user
+      operation: rest:get:https://api.github.com/user
       type: custom
     - name: getGithubPrivateRepositories
-      operation: rest:get:/user/repos?visibility=private&affiliation=owner%2Ccollaborator%2Corganization_member&page={page}&per_page={perPage}
+      operation: rest:get:https://api.github.com/user/repos?visibility=private&affiliation=owner%2Ccollaborator%2Corganization_member&page={page}&per_page={perPage}
       type: custom
     - name: getGithubOrganizations
-      operation: rest:get:/user/orgs?page={page}&per_page={perPage}
+      operation: rest:get:https://api.github.com/user/orgs?page={page}&per_page={perPage}
       type: custom
     - name: getGithubStarredRepositories
-      operation: rest:get:/user/starred?page={page}&per_page={perPage}
+      operation: rest:get:https://api.github.com/user/starred?page={page}&per_page={perPage}
       type: custom
     start:
       stateName: GetProviderProfile
@@ -63,6 +63,7 @@ spec:
           refName: getProviderToken
         name: getProviderToken
       - actionDataFilter:
+          results: '{"name": .name, "login": .login, "email": .email, "company": .company}'
           toStateData: .profile
           useResults: true
         functionRef:
@@ -96,6 +97,9 @@ spec:
           refName: getProviderToken
         name: getProviderToken
       - actionDataFilter:
+          results: 'map({"id": .id, "name": .name, "full_name": .full_name, "html_url":
+            .html_url, "description": .description, "private": .private, "default_branch":
+            .default_branch, "owner": {"login": .owner.login}})'
           toStateData: .privateRepositories
           useResults: true
         functionRef:
@@ -104,7 +108,7 @@ spec:
             HEADER_Authorization: ${ "Bearer " + .providerToken.accessToken }
             HEADER_X-GitHub-Api-Version: ${ $SECRET.github_api_version }
             page: ${ .page // 1 }
-            perPage: ${ .perPage // 100 }
+            perPage: 5
           invoke: sync
           refName: getGithubPrivateRepositories
         name: callGithub
@@ -131,6 +135,8 @@ spec:
           refName: getProviderToken
         name: getProviderToken
       - actionDataFilter:
+          results: 'map({"id": .id, "login": .login, "html_url": .html_url, "description":
+            .description})'
           toStateData: .organizations
           useResults: true
         functionRef:
@@ -139,7 +145,7 @@ spec:
             HEADER_Authorization: ${ "Bearer " + .providerToken.accessToken }
             HEADER_X-GitHub-Api-Version: ${ $SECRET.github_api_version }
             page: ${ .page // 1 }
-            perPage: ${ .perPage // 100 }
+            perPage: 5
           invoke: sync
           refName: getGithubOrganizations
         name: callGithub
@@ -166,6 +172,9 @@ spec:
           refName: getProviderToken
         name: getProviderToken
       - actionDataFilter:
+          results: 'map({"id": .id, "name": .name, "full_name": .full_name, "html_url":
+            .html_url, "description": .description, "private": .private, "default_branch":
+            .default_branch, "owner": {"login": .owner.login}})'
           toStateData: .starredRepositories
           useResults: true
         functionRef:
@@ -174,7 +183,7 @@ spec:
             HEADER_Authorization: ${ "Bearer " + .providerToken.accessToken }
             HEADER_X-GitHub-Api-Version: ${ $SECRET.github_api_version }
             page: ${ .page // 1 }
-            perPage: ${ .perPage // 100 }
+            perPage: 5
           invoke: sync
           refName: getGithubStarredRepositories
         name: callGithub
